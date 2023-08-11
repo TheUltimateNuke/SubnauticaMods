@@ -59,7 +59,7 @@ namespace MRASubnautica
 
                     var isAlive = liveMixin.IsAlive();
                     var className = targetObject.name.Replace("(Clone)", "");
-                    var isCreature = (Creatures.IndexOf(className.ToLower()) > -1);
+                    var isCreature = Creatures.IndexOf(className.ToLower()) > -1;
 
                     if (isAlive && isCreature)
                     {
@@ -72,11 +72,6 @@ namespace MRASubnautica
 
                         TechType getRandomCreature()
                         {
-                            foreach (string Creature in Creatures)
-                            {
-                                MRA_SN.logger.LogInfo(Creature);
-                            }
-
                             var random = new System.Random();
                             var rand = random.Next(0, Creatures.Count);
 
@@ -92,14 +87,21 @@ namespace MRASubnautica
                             return type;
                         }
 
-                        var creatureType = getRandomCreature();
+                        GameObject newObject = null;
 
-                        var task = new TaskResult<GameObject>();
-                        yield return CraftData.GetPrefabForTechTypeAsync(creatureType, true, task);
+                        while (newObject == null)
+                        {
+                            var creatureType = getRandomCreature();
 
-                        var newObject = task.Get();
+                            CoroutineTask<GameObject> task = CraftData.GetPrefabForTechTypeAsync(creatureType);
+
+                            yield return task;
+
+                            newObject = task.GetResult();
+                        }
+
                         var newCreature = newObject.GetComponent<LiveMixin>();
-                        newCreature.health = health;
+                        newCreature.health = Mathf.Clamp(health, 0, newCreature.maxHealth);
 
                         var instantiatedObject = UnityEngine.Object.Instantiate(newCreature, parent);
                         instantiatedObject.transform.position = pos;
